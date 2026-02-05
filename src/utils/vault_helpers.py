@@ -302,6 +302,20 @@ def safe_filename(name: str, max_length: int = 50) -> str:
     return safe
 
 
+def ensure_folder_exists(folder_path: Path) -> Path:
+    """
+    Ensure a folder exists, creating it if necessary.
+
+    Args:
+        folder_path: Path to the folder
+
+    Returns:
+        The folder path
+    """
+    folder_path.mkdir(parents=True, exist_ok=True)
+    return folder_path
+
+
 def log_to_vault(message: str, log_name: str = "system") -> None:
     """
     Append a timestamped message to a vault log file.
