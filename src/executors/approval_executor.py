@@ -26,6 +26,7 @@ from ..utils.vault_helpers import (
     log_to_vault,
 )
 from ..mcp.email_mcp import EmailMCP
+from ..utils.audit_logger import get_audit_logger
 
 
 class ApprovalExecutor:
@@ -52,6 +53,9 @@ class ApprovalExecutor:
 
         # Initialize MCP servers
         self._email_mcp = None  # Lazy initialization
+
+        # Initialize audit logger
+        self.audit_logger = get_audit_logger()
 
         self.logger.info("Approval Executor initialized")
         self.logger.info(f"Previously executed actions: {len(self.executed_ids)}")
@@ -309,6 +313,17 @@ class ApprovalExecutor:
             body=action['body'],
             reply_to_message_id=action.get('reply_to_id'),
             dry_run=dry_run
+        )
+
+        # Audit log the email send
+        self.audit_logger.log_email_send(
+            to=action['to'],
+            subject=action['subject'],
+            actor='claude_code',
+            approval_status='approved',
+            result='success' if result.get('success') else 'failure',
+            message_id=result.get('message_id'),
+            error=result.get('error')
         )
 
         return result
