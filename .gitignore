@@ -1,0 +1,35 @@
+# Environment and secrets
+.env
+.env.*
+credentials/*.json
+credentials/*.pkl
+credentials/token.pickle
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+credentials/token_send.pickle
+
+# Additional credentials (Gold tier)
+credentials/odoo_config.json
+credentials/twitter_credentials.json
+
+# Cache
+.pytest_cache/
+
+# UV lock (optional - can include for reproducibility)
+# uv.lock
