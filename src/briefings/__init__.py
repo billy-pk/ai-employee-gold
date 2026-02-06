@@ -11,6 +11,12 @@ from .data_collectors import (
     generate_engagement_summary,
 )
 
+from .ceo_briefing import (
+    CEOBriefingGenerator,
+    BriefingData,
+    generate_ceo_briefing,
+)
+
 __all__ = [
     'OdooDataCollector',
     'TwitterDataCollector',
@@ -20,4 +26,7 @@ __all__ = [
     'collect_twitter_data',
     'generate_financial_brief',
     'generate_engagement_summary',
+    'CEOBriefingGenerator',
+    'BriefingData',
+    'generate_ceo_briefing',
 ]
