@@ -220,6 +220,28 @@ class AuditLogger:
             } if tweet_id or error else None
         )
 
+    def log_tweet(
+        self,
+        action: str,
+        tweet_id: str,
+        content: str = '',
+        actor: str = 'claude_code',
+        result: str = 'success',
+        error: Optional[str] = None
+    ) -> dict:
+        """Convenience method for logging any tweet action."""
+        return self.log_action(
+            action_type=f'tweet_{action}',
+            actor=actor,
+            target=tweet_id,
+            parameters={
+                'content': content[:50] + '...' if len(content) > 50 else content,
+            } if content else {},
+            approval_status='approved' if action == 'post' else 'not_required',
+            result=result,
+            result_details={'error': error} if error else None
+        )
+
     def log_file_process(
         self,
         filename: str,

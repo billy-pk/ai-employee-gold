@@ -379,6 +379,230 @@ class OdooDataCollector:
             }
 
 
+@dataclass
+class SocialSnapshot:
+    """Snapshot of social media data from Twitter."""
+    timestamp: str
+    username: str = ''
+    followers: int = 0
+    recent_tweets: int = 0
+    total_likes: int = 0
+    total_retweets: int = 0
+    total_replies: int = 0
+    total_impressions: int = 0
+    top_tweets: list[dict] = field(default_factory=list)
+    recent_mentions: int = 0
+
+
+class TwitterDataCollector:
+    """
+    Collects social media data from Twitter for daily briefings.
+
+    Features:
+    - Pulls engagement metrics
+    - Tracks follower growth
+    - Identifies top-performing tweets
+    - Updates engagement.md in vault
+    """
+
+    def __init__(self):
+        """Initialize the Twitter data collector."""
+        self.logger = get_logger('TwitterDataCollector')
+        self._twitter = None
+        self.social_folder = get_vault_folder('Social/Twitter')
+        self.data_folder = get_vault_folder('Data/Social')
+
+        ensure_folder_exists(self.data_folder)
+
+        self.logger.info("Twitter Data Collector initialized")
+
+    @property
+    def twitter(self):
+        """Lazy load Twitter MCP."""
+        if self._twitter is None:
+            from ..mcp.twitter_mcp import get_twitter_mcp
+            self._twitter = get_twitter_mcp()
+        return self._twitter
+
+    def collect_snapshot(self) -> SocialSnapshot:
+        """
+        Collect a snapshot of current Twitter data.
+
+        Returns:
+            SocialSnapshot with current Twitter data
+        """
+        self.logger.info("Collecting social snapshot from Twitter")
+
+        snapshot = SocialSnapshot(
+            timestamp=datetime.now().isoformat()
+        )
+
+        # Authenticate and get user info
+        auth = self.twitter.authenticate()
+        if auth['success']:
+            snapshot.username = auth['username']
+            snapshot.followers = auth.get('followers', 0)
+
+        # Get recent tweets with engagement
+        tweets = self.twitter.get_my_tweets(count=20)
+        if tweets['success']:
+            snapshot.recent_tweets = len(tweets['data'])
+
+            for tweet in tweets['data']:
+                metrics = tweet.get('metrics', {})
+                snapshot.total_likes += metrics.get('like_count', 0)
+                snapshot.total_retweets += metrics.get('retweet_count', 0)
+                snapshot.total_replies += metrics.get('reply_count', 0)
+                snapshot.total_impressions += metrics.get('impression_count', 0)
+
+            # Top tweets by engagement
+            sorted_tweets = sorted(
+                tweets['data'],
+                key=lambda t: sum([
+                    t.get('metrics', {}).get('like_count', 0),
+                    t.get('metrics', {}).get('retweet_count', 0) * 2
+                ]),
+                reverse=True
+            )
+
+            snapshot.top_tweets = [
+                {
+                    'id': t['id'],
+                    'text': t['text'][:50] + '...' if len(t['text']) > 50 else t['text'],
+                    'likes': t.get('metrics', {}).get('like_count', 0),
+                    'retweets': t.get('metrics', {}).get('retweet_count', 0)
+                }
+                for t in sorted_tweets[:5]
+            ]
+
+        # Get mentions
+        mentions = self.twitter.get_mentions(count=20)
+        if mentions['success']:
+            snapshot.recent_mentions = len(mentions['data'])
+
+        self.logger.info(f"Collected snapshot: @{snapshot.username}, "
+                         f"{snapshot.followers} followers, {snapshot.total_likes} likes")
+
+        return snapshot
+
+    def save_snapshot(self, snapshot: SocialSnapshot) -> Path:
+        """Save a snapshot to the vault."""
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        filename = f"SOCIAL_SNAPSHOT_{date_str}.json"
+        filepath = self.data_folder / filename
+
+        with open(filepath, 'w') as f:
+            json.dump(asdict(snapshot), f, indent=2, default=str)
+
+        self.logger.info(f"Saved social snapshot: {filepath}")
+        return filepath
+
+    def load_snapshot(self, date_str: Optional[str] = None) -> Optional[SocialSnapshot]:
+        """Load a snapshot from the vault."""
+        if date_str is None:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+
+        filename = f"SOCIAL_SNAPSHOT_{date_str}.json"
+        filepath = self.data_folder / filename
+
+        if not filepath.exists():
+            return None
+
+        try:
+            with open(filepath) as f:
+                data = json.load(f)
+            return SocialSnapshot(**data)
+        except Exception as e:
+            self.logger.error(f"Failed to load snapshot: {e}")
+            return None
+
+    def update_engagement_file(self, snapshot: SocialSnapshot):
+        """Update the engagement.md file in the vault."""
+        engagement_file = self.social_folder / 'engagement.md'
+
+        lines = [
+            "# Twitter Engagement",
+            "",
+            f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
+            "",
+            "## Account Overview",
+            "",
+            f"- **Username**: @{snapshot.username}",
+            f"- **Followers**: {snapshot.followers:,}",
+            "",
+            "## Recent Performance (Last 20 Tweets)",
+            "",
+            f"- **Tweets**: {snapshot.recent_tweets}",
+            f"- **Total Likes**: {snapshot.total_likes:,}",
+            f"- **Total Retweets**: {snapshot.total_retweets:,}",
+            f"- **Total Replies**: {snapshot.total_replies:,}",
+            f"- **Total Impressions**: {snapshot.total_impressions:,}",
+            f"- **Mentions**: {snapshot.recent_mentions}",
+            "",
+        ]
+
+        if snapshot.top_tweets:
+            lines.extend([
+                "## Top Tweets",
+                "",
+            ])
+            for i, tweet in enumerate(snapshot.top_tweets, 1):
+                lines.append(f"{i}. {tweet['text']}")
+                lines.append(f"   - Likes: {tweet['likes']}, Retweets: {tweet['retweets']}")
+                lines.append("")
+
+        lines.extend([
+            "---",
+            "*Data from Twitter API*"
+        ])
+
+        engagement_file.write_text('\n'.join(lines))
+        self.logger.info(f"Updated engagement file: {engagement_file}")
+
+    def run_daily_sync(self) -> dict:
+        """Run the full daily sync process."""
+        self.logger.info("Starting daily Twitter sync")
+
+        try:
+            # Test connection first
+            auth = self.twitter.authenticate()
+            if not auth['success']:
+                return {
+                    'success': False,
+                    'error': f"Twitter connection failed: {auth.get('error')}"
+                }
+
+            # Collect snapshot
+            snapshot = self.collect_snapshot()
+
+            # Save snapshot
+            snapshot_path = self.save_snapshot(snapshot)
+
+            # Update engagement file
+            self.update_engagement_file(snapshot)
+
+            self.logger.info("Daily Twitter sync completed successfully")
+
+            return {
+                'success': True,
+                'snapshot_path': str(snapshot_path),
+                'summary': {
+                    'username': snapshot.username,
+                    'followers': snapshot.followers,
+                    'total_likes': snapshot.total_likes,
+                    'total_retweets': snapshot.total_retweets,
+                    'mentions': snapshot.recent_mentions
+                }
+            }
+
+        except Exception as e:
+            self.logger.error(f"Daily Twitter sync failed: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+
 # Convenience functions
 def collect_odoo_data() -> FinancialSnapshot:
     """Collect current Odoo financial data."""
@@ -391,6 +615,24 @@ def generate_financial_brief() -> str:
     collector = OdooDataCollector()
     snapshot = collector.collect_snapshot()
     return collector.generate_brief(snapshot)
+
+
+def collect_twitter_data() -> SocialSnapshot:
+    """Collect current Twitter social data."""
+    collector = TwitterDataCollector()
+    return collector.collect_snapshot()
+
+
+def generate_engagement_summary() -> dict:
+    """Generate an engagement summary from Twitter data."""
+    collector = TwitterDataCollector()
+    snapshot = collector.collect_snapshot()
+    collector.update_engagement_file(snapshot)
+    return {
+        'username': snapshot.username,
+        'followers': snapshot.followers,
+        'total_engagement': snapshot.total_likes + snapshot.total_retweets + snapshot.total_replies
+    }
 
 
 if __name__ == '__main__':
