@@ -6,220 +6,404 @@
 [![Python](https://img.shields.io/badge/python-3.13%2B-blue)]()
 [![Phase](https://img.shields.io/badge/phase-Gold-gold)]()
 
-## Overview
+---
 
-The Personal AI Employee is an autonomous AI agent system that proactively manages personal and business affairs. Unlike traditional chatbots that wait for user input, this system actively monitors communications, finances, and social media—then takes action or requests approval when needed.
+## What Does This App Do?
 
-**Phase:** Gold (Autonomous Employee) - **Complete**
+AI Employee is an **autonomous assistant** that runs in the background and manages your:
 
-## Gold Tier Features
+1. **Emails** - Monitors Gmail, creates action items, drafts replies (with your approval)
+2. **Files** - Watches folders for new documents, processes them automatically
+3. **Finances** - Parses bank CSV statements, detects subscriptions, flags large transactions
+4. **Invoicing** - Creates and manages invoices in Odoo accounting software
+5. **Social Media** - Posts tweets (with approval), tracks engagement metrics
+6. **Business Intelligence** - Generates weekly CEO briefings with insights
 
-| Component | Description |
-|-----------|-------------|
-| **Finance Watcher** | Monitor bank CSV imports, detect subscriptions, flag large transactions |
-| **Odoo MCP** | Full accounting integration - invoices, payments, customers, balances |
-| **Twitter/X MCP** | Social media posting (with approval) and engagement tracking |
-| **CEO Briefing** | Weekly business intelligence report with actionable insights |
-| **Ralph Wiggum Loop** | Task persistence for autonomous multi-step completion |
-| **Watchdog** | Process monitoring with auto-restart and health reporting |
-| **Audit Logging** | Comprehensive structured logging with 90-day retention |
+### Key Principle: Human-in-the-Loop
 
-## Architecture
+The AI **never takes action without your approval**. It:
+- Analyzes incoming data
+- Creates plans and drafts
+- Puts them in `Pending_Approval/` folder
+- Waits for you to approve or reject
+- Only then executes the action
+
+---
+
+## Do I Need to Run It Manually?
+
+**No! Once cron is configured, everything runs automatically.**
+
+### How It Works:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     PERCEPTION LAYER                             │
-│  Gmail Watcher │ FileSystem Watcher │ Finance Watcher           │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     REASONING LAYER                              │
-│  Claude Processor (with Ralph Wiggum Loop)                      │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                  HUMAN-IN-THE-LOOP LAYER                         │
-│  Obsidian Vault: Pending_Approval → Approved/Rejected           │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                      ACTION LAYER                                │
-│  Email MCP │ Odoo MCP │ Twitter MCP                             │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│               BUSINESS INTELLIGENCE LAYER                        │
-│  CEO Briefing Generator (Weekly)                                │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CRON SCHEDULER                               │
+│                    (Runs automatically 24/7)                         │
+└─────────────────────────────────────────────────────────────────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        ▼                        ▼                        ▼
+┌───────────────┐      ┌───────────────┐      ┌───────────────┐
+│ Gmail Watcher │      │Finance Watcher│      │   Watchdog    │
+│  (every 2min) │      │  (every 5min) │      │  (every 5min) │
+└───────┬───────┘      └───────┬───────┘      └───────────────┘
+        │                      │
+        ▼                      ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      OBSIDIAN VAULT                                  │
+│                                                                      │
+│   Needs_Action/  →  Plans/  →  Pending_Approval/  →  Done/          │
+│                                                                      │
+│   YOU review and approve items in Pending_Approval/                  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Prerequisites
+### Automatic Schedule (Cron):
 
-- Python 3.13+
-- [uv](https://docs.astral.sh/uv/) package manager
-- Obsidian (for vault management)
-- Gmail API credentials
-- Odoo Community Edition 19+ (for accounting features)
-- Twitter Developer API credentials (for social features)
+| Task | Frequency | What It Does |
+|------|-----------|--------------|
+| Gmail Watcher | Every 2 min | Checks for new emails |
+| File Watcher | Every 1 min | Checks watched folders for new files |
+| Finance Watcher | Every 5 min | Checks for new bank CSV files |
+| Claude Processor | Every 5 min | Processes items in Needs_Action/ |
+| Approval Executor | Every 1 min | Executes approved actions |
+| Watchdog | Every 5 min | Monitors system health, restarts failed processes |
+| Odoo Sync | Every 6 hours | Syncs financial data from Odoo |
+| CEO Briefing | Sunday 11 PM | Generates weekly business report |
 
-## Quick Start
+---
 
-### 1. Clone and Setup
+## How to Observe the System
+
+### 1. Open Obsidian Vault
+
+Your vault is at: `D:\AI_EMPLOYEE_VAULT` (or configured `VAULT_PATH`)
+
+**Key files to watch:**
+
+| File/Folder | What to Look For |
+|-------------|------------------|
+| `Dashboard.md` | System status, health, recent activity |
+| `Needs_Action/` | New items waiting to be processed |
+| `Pending_Approval/` | Items waiting for YOUR approval |
+| `Done/` | Completed items (audit trail) |
+| `Briefings/` | Weekly CEO briefings |
+| `Audit/` | JSON logs of all actions taken |
+
+### 2. Check Logs
+
+```bash
+# View Finance Watcher logs
+tail -f /tmp/finance_watcher.log
+
+# View Watchdog logs
+tail -f /tmp/watchdog.log
+
+# View Odoo sync logs
+tail -f /tmp/odoo_sync.log
+
+# View CEO briefing logs
+tail -f /tmp/ceo_briefing.log
+
+# View all Gold logs at once
+tail -f /tmp/*.log
+```
+
+### 3. Manual Testing (Optional)
+
+You can run any component manually to test it:
 
 ```bash
 cd ~/vibe-coding-projects/ai-employee-gold
-uv sync
-cp .env.example .env
-# Edit .env with your configuration
-```
 
-### 2. Configure Credentials
-
-```bash
-# Gmail (required)
-# Place gmail_credentials.json in credentials/
-
-# Odoo (for accounting features)
-# Create credentials/odoo_config.json
-
-# Twitter (for social features)
-# Create credentials/twitter_credentials.json
-```
-
-### 3. Setup Obsidian Vault
-
-Create vault at `D:\AI_EMPLOYEE_VAULT` (Windows) or configure `VAULT_PATH` in `.env`.
-
-Required folder structure:
-```
-AI_EMPLOYEE_VAULT/
-├── Dashboard.md
-├── Company_Handbook.md
-├── Inbox/
-├── Needs_Action/
-├── Plans/
-├── Pending_Approval/
-├── Approved/
-├── Rejected/
-├── Done/
-├── Logs/
-├── Business/
-│   ├── Transactions/
-│   └── Odoo/
-├── Social/
-│   └── Twitter/
-├── Briefings/
-├── Audit/
-└── Tasks/
-```
-
-### 4. Run Components
-
-```bash
-# Individual watchers
-uv run python scripts/run_gmail_watcher.py
-uv run python scripts/run_filesystem_watcher.py
+# Test Finance Watcher
 uv run python scripts/run_finance_watcher.py
 
-# Processor and executor
-uv run python scripts/run_claude_processor.py
-uv run python scripts/run_approval_executor.py
-
-# Monitoring
+# Test Watchdog
 uv run python scripts/run_watchdog.py
 
-# Business intelligence
+# Test Odoo Sync
+uv run python scripts/run_odoo_sync.py
+
+# Generate CEO Briefing now (instead of waiting for Sunday)
 uv run python scripts/run_ceo_briefing.py
 ```
 
-### 5. Configure Cron (Automated Operation)
+---
 
+## Detailed Feature Guide
+
+### 1. Finance Watcher
+
+**What it does:** Monitors `Business/Transactions/` folder for bank CSV files.
+
+**How to use:**
+1. Download your bank statement as CSV
+2. Drop it in `D:\AI_EMPLOYEE_VAULT\Business\Transactions\`
+3. Within 5 minutes, Finance Watcher will:
+   - Parse the CSV (supports Chase, Bank of America, generic formats)
+   - Detect subscriptions (Netflix, Spotify, Adobe, etc.)
+   - Flag large transactions (>$500)
+   - Create a summary in `Needs_Action/FINANCE_*.md`
+
+**Where to see results:**
+- `Needs_Action/FINANCE_*.md` - Summary with flagged items
+- `/tmp/finance_watcher.log` - Processing logs
+
+---
+
+### 2. Odoo Integration
+
+**What it does:** Connects to your Odoo accounting system to manage invoices.
+
+**Capabilities:**
+- Create invoices
+- Record payments
+- View customer list
+- Check account balances
+- Sync financial data
+
+**How to use:**
+1. Ensure Odoo is running: `docker-compose up -d`
+2. Access Odoo UI: http://localhost:8069
+3. System syncs automatically every 6 hours
+4. Manual sync: `uv run python scripts/run_odoo_sync.py`
+
+**Where to see results:**
+- `Data/Financial/FINANCIAL_SNAPSHOT_*.json` - Raw data
+- `Briefs/FINANCIAL_BRIEF_*.md` - Human-readable summary
+- `/tmp/odoo_sync.log` - Sync logs
+
+---
+
+### 3. Twitter Integration
+
+**What it does:** Manages your Twitter account with approval workflow.
+
+**Capabilities:**
+- Post tweets (requires approval)
+- Schedule tweets for later
+- Track engagement metrics
+- Monitor mentions
+
+**How to use:**
+1. AI drafts a tweet → Creates `Pending_Approval/TWEET_*.md`
+2. You review the tweet in Obsidian
+3. Add `approved: true` to the frontmatter
+4. Approval Executor posts the tweet
+5. Logged to `Social/Twitter/posted.md`
+
+**Where to see results:**
+- `Pending_Approval/TWEET_*.md` - Tweets awaiting approval
+- `Social/Twitter/posted.md` - Posted tweets log
+- `Social/Twitter/engagement.md` - Engagement metrics
+
+---
+
+### 4. CEO Briefing
+
+**What it does:** Generates a weekly business intelligence report.
+
+**When it runs:** Automatically every Sunday at 11 PM
+
+**What it includes:**
+- Financial summary (revenue, outstanding invoices, overdue)
+- Social media metrics (followers, engagement, mentions)
+- Task completion statistics
+- Alerts and recommended actions
+- Week-over-week comparisons
+
+**How to generate manually:**
 ```bash
-# Edit crontab
-crontab -e
-
-# Add these entries:
-*/2 * * * * cd ~/vibe-coding-projects/ai-employee-gold && uv run python scripts/run_gmail_watcher.py
-*/1 * * * * cd ~/vibe-coding-projects/ai-employee-gold && uv run python scripts/run_filesystem_watcher.py
-*/5 * * * * cd ~/vibe-coding-projects/ai-employee-gold && uv run python scripts/run_finance_watcher.py
-*/5 * * * * cd ~/vibe-coding-projects/ai-employee-gold && uv run python scripts/run_claude_processor.py
-*/1 * * * * cd ~/vibe-coding-projects/ai-employee-gold && uv run python scripts/run_approval_executor.py
-*/5 * * * * cd ~/vibe-coding-projects/ai-employee-gold && uv run python scripts/run_watchdog.py
-0 */6 * * * cd ~/vibe-coding-projects/ai-employee-gold && uv run python scripts/run_odoo_sync.py
-0 23 * * 0 cd ~/vibe-coding-projects/ai-employee-gold && uv run python scripts/run_ceo_briefing.py
+uv run python scripts/run_ceo_briefing.py
 ```
 
-## Project Structure
+**Where to see results:**
+- `Briefings/YYYY-MM-DD_Weekday_Briefing.md` - The briefing
+- `Data/Briefings/BRIEFING_DATA_*.json` - Raw data for comparisons
+
+---
+
+### 5. Watchdog (System Monitor)
+
+**What it does:** Monitors all watchers and restarts them if they crash.
+
+**How it works:**
+1. Checks PID files in `Logs/` folder
+2. Verifies each process is running
+3. Restarts any stopped processes
+4. Updates `Dashboard.md` with health status
+5. Alerts after 3 consecutive failures
+
+**Where to see results:**
+- `Dashboard.md` - System Health section
+- `/tmp/watchdog.log` - Health check logs
+
+---
+
+### 6. Audit Logger
+
+**What it does:** Logs every action for compliance and debugging.
+
+**What gets logged:**
+- Emails sent
+- Invoices created
+- Tweets posted
+- Files processed
+- All approvals/rejections
+
+**Where to see results:**
+- `Audit/YYYY-MM-DD.json` - Daily audit logs
+
+**Retention:** 90 days (auto-cleanup on 1st of each month)
+
+---
+
+## Quick Reference: Vault Folder Structure
 
 ```
-ai-employee-gold/
-├── src/
-│   ├── watchers/        # Gmail, FileSystem, Finance watchers
-│   ├── mcp/             # Email, Odoo, Twitter MCP servers
-│   ├── processors/      # Claude processor
-│   ├── executors/       # Approval executor
-│   ├── briefings/       # CEO Briefing generator
-│   ├── hooks/           # Ralph Wiggum loop
-│   ├── watchdog/        # Process monitor
-│   └── utils/           # Logging, vault helpers, audit
-├── scripts/             # Runner scripts
-├── skills/              # Claude Code skills
-├── tests/               # Test suite
-├── credentials/         # API credentials (gitignored)
-├── PRD.md              # Product Requirements Document
-├── TASKS.md            # Implementation task list
-└── README.md           # This file
+AI_EMPLOYEE_VAULT/
+│
+├── Dashboard.md           ← System status overview
+├── Company_Handbook.md    ← Policies and procedures
+│
+├── Inbox/                 ← Raw incoming items
+├── Needs_Action/          ← Items to be processed by AI
+├── Plans/                 ← AI-generated plans
+├── Pending_Approval/      ← ⭐ CHECK THIS - Items waiting for YOU
+├── Done/                  ← Completed items
+│
+├── Business/
+│   ├── Transactions/      ← Drop bank CSVs here
+│   └── Odoo/              ← Odoo sync data
+│
+├── Social/
+│   └── Twitter/
+│       ├── scheduled_posts.md
+│       ├── posted.md
+│       └── engagement.md
+│
+├── Briefings/             ← CEO weekly briefings
+├── Audit/                 ← Action logs (JSON)
+├── Logs/                  ← Process PID files
+└── Tasks/                 ← Multi-step task tracking
 ```
+
+---
+
+## Common Operations
+
+### Start the System
+```bash
+# Start cron service (if not running)
+sudo service cron start
+
+# Verify cron is running
+crontab -l
+```
+
+### Stop the System
+```bash
+# Remove all cron jobs (stops automation)
+crontab -r
+
+# Or just stop cron service
+sudo service cron stop
+```
+
+### Check System Health
+```bash
+# Quick status check
+uv run python scripts/run_watchdog.py
+
+# Or check Dashboard.md in Obsidian
+```
+
+### Force Generate CEO Briefing
+```bash
+uv run python scripts/run_ceo_briefing.py
+```
+
+### Test a Component
+```bash
+# Run any script manually
+uv run python scripts/run_finance_watcher.py
+uv run python scripts/run_odoo_sync.py
+```
+
+### View Recent Activity
+```bash
+# Check audit logs
+cat /mnt/d/AI_EMPLOYEE_VAULT/Audit/$(date +%Y-%m-%d).json | jq .
+
+# Check recent logs
+tail -50 /tmp/finance_watcher.log
+```
+
+---
+
+## Troubleshooting
+
+### Nothing is happening?
+1. Check cron is running: `service cron status`
+2. Check crontab exists: `crontab -l`
+3. Check logs: `tail -f /tmp/*.log`
+
+### Odoo not connecting?
+1. Ensure Docker is running: `docker ps`
+2. Start Odoo: `cd ~/vibe-coding-projects/ai-employee-gold && docker-compose up -d`
+3. Check Odoo UI: http://localhost:8069
+
+### Twitter not working?
+1. Check credentials: `cat credentials/twitter_credentials.json`
+2. Test manually: `uv run python -c "from src.mcp.twitter_mcp import get_twitter_mcp; print(get_twitter_mcp().authenticate())"`
+
+### Want to see what's happening in real-time?
+```bash
+# Watch all logs
+tail -f /tmp/*.log /mnt/d/AI_EMPLOYEE_VAULT/Logs/*.log
+```
+
+---
 
 ## Testing
 
 ```bash
-# Run all tests
+# Run all 251 tests
 uv run pytest
 
-# Run with verbose output
-uv run pytest -v
-
-# Run specific test file
+# Run specific component tests
+uv run pytest tests/test_finance_watcher.py -v
 uv run pytest tests/test_twitter_mcp.py -v
+uv run pytest tests/test_ceo_briefing.py -v
 
 # Run integration tests
 uv run pytest tests/test_integration.py -v
 ```
 
-**Test Suite:** 251 tests covering all components
+---
 
 ## Documentation
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and data flows
-- [PRD.md](PRD.md) - Full product requirements and specifications
-- [TASKS.md](TASKS.md) - Implementation task breakdown
-- [vault/Company_Handbook.md](vault/Company_Handbook.md) - Policies and procedures
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture diagrams
+- [PRD.md](PRD.md) - Product requirements
+- [TASKS.md](TASKS.md) - Implementation checklist
+- [reports/gold_completion_report.md](reports/gold_completion_report.md) - Completion report
 
-## Skills
+---
 
-Claude Code skills are available for direct interaction:
+## Summary
 
-| Skill | Command | Description |
-|-------|---------|-------------|
-| CEO Briefing | `/ceo-briefing` | Generate weekly business intelligence report |
-| Social Poster | `/social-poster` | Create tweet with approval workflow |
-| Ralph Wiggum | `/ralph-wiggum` | Start multi-step autonomous task |
+| Question | Answer |
+|----------|--------|
+| Do I need to run it manually? | **No**, cron runs everything automatically |
+| Where do I approve things? | `Pending_Approval/` folder in Obsidian |
+| Where are the logs? | `/tmp/*.log` and `Audit/` folder |
+| Where are the reports? | `Briefings/` folder |
+| How do I stop it? | `crontab -r` or `sudo service cron stop` |
+| How do I test it? | Run any script manually with `uv run python scripts/...` |
 
-## Development Status
+---
 
-**Gold Phase: Complete**
-
-- Phase 0: External Setup ✅
-- Phase 1: Foundation ✅ (136 tests)
-- Phase 2: Odoo Integration ✅ (44 tests)
-- Phase 3: Twitter Integration ✅ (25 tests)
-- Phase 4: Business Intelligence ✅ (19 tests)
-- Phase 5: Integration & Hardening ✅ (27 tests)
-- Phase 6: Documentation ✅
-
-See [TASKS.md](TASKS.md) for detailed task breakdown.
-
-## License
-
-Private - All rights reserved.
+**AI Employee Gold v3.0** - Your autonomous business assistant.
