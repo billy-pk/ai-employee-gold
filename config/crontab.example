@@ -1,0 +1,39 @@
+# AI Employee Gold - Cron Configuration
+#
+# To install: crontab -e and paste these lines
+# Make sure to update PROJECT_PATH to your actual path
+#
+# Environment setup (add to top of crontab):
+# SHELL=/bin/bash
+# PATH=/usr/local/bin:/usr/bin:/bin
+# PROJECT_PATH=/home/bilali/vibe-coding-projects/ai-employee-gold
+
+# ============================================================
+# Finance Watcher - Check for new bank CSV files every 5 minutes
+# ============================================================
+*/5 * * * * cd $PROJECT_PATH && /home/bilali/.local/bin/uv run python scripts/run_finance_watcher.py >> /tmp/finance_watcher.log 2>&1
+
+# ============================================================
+# Watchdog - Monitor and restart failed watchers every 5 minutes
+# ============================================================
+*/5 * * * * cd $PROJECT_PATH && /home/bilali/.local/bin/uv run python scripts/run_watchdog.py >> /tmp/watchdog.log 2>&1
+
+# ============================================================
+# Odoo Sync - Sync financial data every 6 hours
+# ============================================================
+0 */6 * * * cd $PROJECT_PATH && /home/bilali/.local/bin/uv run python scripts/run_odoo_sync.py >> /tmp/odoo_sync.log 2>&1
+
+# ============================================================
+# CEO Briefing - Generate weekly briefing Sunday at 11 PM
+# ============================================================
+0 23 * * 0 cd $PROJECT_PATH && /home/bilali/.local/bin/uv run python scripts/run_ceo_briefing.py >> /tmp/ceo_briefing.log 2>&1
+
+# ============================================================
+# Log Rotation - Clean up old logs monthly
+# ============================================================
+0 0 1 * * find /tmp -name "*.log" -mtime +30 -delete 2>/dev/null
+
+# ============================================================
+# Audit Cleanup - Remove audit logs older than 90 days (first of month)
+# ============================================================
+0 1 1 * * cd $PROJECT_PATH && /home/bilali/.local/bin/uv run python -c "from src.utils.audit_logger import get_audit_logger; get_audit_logger().cleanup_old_logs()" >> /tmp/audit_cleanup.log 2>&1

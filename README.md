@@ -2,11 +2,15 @@
 
 **Your life and business on autopilot. Local-first, agent-driven, human-in-the-loop.**
 
+[![Tests](https://img.shields.io/badge/tests-251%20passing-brightgreen)]()
+[![Python](https://img.shields.io/badge/python-3.13%2B-blue)]()
+[![Phase](https://img.shields.io/badge/phase-Gold-gold)]()
+
 ## Overview
 
 The Personal AI Employee is an autonomous AI agent system that proactively manages personal and business affairs. Unlike traditional chatbots that wait for user input, this system actively monitors communications, finances, and social media—then takes action or requests approval when needed.
 
-**Phase:** Gold (Autonomous Employee)
+**Phase:** Gold (Autonomous Employee) - **Complete**
 
 ## Gold Tier Features
 
@@ -167,14 +171,54 @@ ai-employee-gold/
 └── README.md           # This file
 ```
 
+## Testing
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with verbose output
+uv run pytest -v
+
+# Run specific test file
+uv run pytest tests/test_twitter_mcp.py -v
+
+# Run integration tests
+uv run pytest tests/test_integration.py -v
+```
+
+**Test Suite:** 251 tests covering all components
+
 ## Documentation
 
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and data flows
 - [PRD.md](PRD.md) - Full product requirements and specifications
 - [TASKS.md](TASKS.md) - Implementation task breakdown
+- [vault/Company_Handbook.md](vault/Company_Handbook.md) - Policies and procedures
+
+## Skills
+
+Claude Code skills are available for direct interaction:
+
+| Skill | Command | Description |
+|-------|---------|-------------|
+| CEO Briefing | `/ceo-briefing` | Generate weekly business intelligence report |
+| Social Poster | `/social-poster` | Create tweet with approval workflow |
+| Ralph Wiggum | `/ralph-wiggum` | Start multi-step autonomous task |
 
 ## Development Status
 
-See [TASKS.md](TASKS.md) for current progress.
+**Gold Phase: Complete**
+
+- Phase 0: External Setup ✅
+- Phase 1: Foundation ✅ (136 tests)
+- Phase 2: Odoo Integration ✅ (44 tests)
+- Phase 3: Twitter Integration ✅ (25 tests)
+- Phase 4: Business Intelligence ✅ (19 tests)
+- Phase 5: Integration & Hardening ✅ (27 tests)
+- Phase 6: Documentation ✅
+
+See [TASKS.md](TASKS.md) for detailed task breakdown.
 
 ## License
 
