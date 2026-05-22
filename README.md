@@ -155,13 +155,10 @@ uv run python scripts/run_ceo_briefing.py
 
 **One-time setup (required before first run):**
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/) and create or select a project
-2. Enable the **Gmail API** under APIs & Services > Library
-3. Create **OAuth 2.0 credentials** (Desktop app type) under APIs & Services > Credentials
-4. Download the JSON file and save it as `credentials/gmail_credentials.json`
-5. Add your Gmail address as a **test user** in the OAuth consent screen
-6. On first run a browser window opens — sign in and grant read access
-7. A `credentials/token.pickle` is saved automatically; future runs use it without re-prompting
+See [`credentials/README.md`](credentials/README.md) for the full Gmail OAuth setup walkthrough. In short:
+1. Enable Gmail API in Google Cloud Console and create an OAuth 2.0 Desktop app credential
+2. Save the downloaded JSON as `credentials/gmail_credentials.json`
+3. On first run a browser window opens for authorization — `credentials/token.pickle` is then saved automatically
 
 **How to use:**
 ```bash
@@ -237,22 +234,10 @@ uv run python scripts/run_gmail_watcher.py --check-interval 60
 
 **One-time setup (required before first run):**
 
-1. Go to [developer.twitter.com](https://developer.twitter.com/) and create a project + app
-2. Under your app's **Keys and Tokens**, generate:
-   - API Key & Secret
-   - Access Token & Secret (with **Read and Write** permissions)
-   - Bearer Token
-3. Save all five values in `credentials/twitter_credentials.json`:
-   ```json
-   {
-     "api_key": "YOUR_API_KEY",
-     "api_secret": "YOUR_API_SECRET",
-     "access_token": "YOUR_ACCESS_TOKEN",
-     "access_token_secret": "YOUR_ACCESS_TOKEN_SECRET",
-     "bearer_token": "YOUR_BEARER_TOKEN"
-   }
-   ```
-4. Ensure your app has **Read and Write** OAuth 1.0a permissions (not read-only)
+See [`credentials/README.md`](credentials/README.md) for the full Twitter/X setup walkthrough. In short:
+1. Create a Twitter developer app with **Read and Write** permissions
+2. Generate API Key, API Secret, Access Token, Access Token Secret, and Bearer Token
+3. Save all five values in `credentials/twitter_credentials.json`
 
 **How tweet posting works:**
 1. AI drafts a tweet → Creates `Pending_Approval/TWEET_*.md`
@@ -422,30 +407,13 @@ tail -50 /tmp/finance_watcher.log
 
 ### Gmail not working?
 
-**"File not found: gmail_credentials.json"**
-- Download OAuth credentials from Google Cloud Console and save as `credentials/gmail_credentials.json`
-
-**"Access blocked: This app's request is invalid"**
-- Add your Gmail address as a test user in the OAuth consent screen
-- Verify the Gmail API is enabled in your Google Cloud project
-
-**"Token has been expired or revoked"**
-- Delete `credentials/token.pickle` and re-run — the OAuth flow will restart in the browser
-
-**No emails appearing in Needs_Action/?**
-- Only emails marked **both** unread and important in Gmail are picked up
-- Mark emails as Important in Gmail or change the query in `src/watchers/gmail_watcher.py`
+- For credential errors, see [`credentials/README.md`](credentials/README.md#troubleshooting)
+- **No emails appearing in Needs_Action/?** — only emails marked **both** unread and important in Gmail are picked up; mark them as Important in Gmail or adjust the query in `src/watchers/gmail_watcher.py`
 
 ### Twitter/X not working?
 
-**"Unauthorized" or "403 Forbidden"**
-- Verify your app has **Read and Write** permissions (not read-only) in the Twitter developer portal
-- Regenerate Access Token & Secret after changing permissions
-
-**Tweets not posting after approval?**
-- Confirm `approved: true` is in the frontmatter of the `Pending_Approval/TWEET_*.md` file
-- Check the Approval Executor is running: `tail -f /tmp/*.log | grep -i tweet`
-- Test credentials manually: `uv run python -c "from src.mcp.twitter_mcp import TwitterMCP; TwitterMCP()"`
+- For credential and API errors, see [`credentials/README.md`](credentials/README.md#troubleshooting-1)
+- **Tweets not posting after approval?** — confirm `approved: true` is in the frontmatter of the `Pending_Approval/TWEET_*.md` file and check `tail -f /tmp/*.log | grep -i tweet`
 
 ### Odoo not connecting?
 1. Ensure Docker is running: `docker ps`
