@@ -274,7 +274,7 @@ D:\AI_EMPLOYEE_VAULT\
 ### 3.6 Code Project Structure (Gold)
 
 ```
-~/vibe-coding-projects/ai-employee/
+~/vibe-coding-projects/ai-employee-gold/
 ├── .env                         # Environment variables
 ├── .gitignore                   # Git exclusions
 ├── pyproject.toml               # UV project configuration
