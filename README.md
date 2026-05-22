@@ -94,6 +94,9 @@ Your vault is at: `D:\AI_EMPLOYEE_VAULT` (or configured `VAULT_PATH`)
 ### 2. Check Logs
 
 ```bash
+# View Gmail Watcher logs
+tail -f /tmp/gmail_watcher.log
+
 # View Finance Watcher logs
 tail -f /tmp/finance_watcher.log
 
@@ -117,6 +120,12 @@ You can run any component manually to test it:
 ```bash
 cd ~/vibe-coding-projects/ai-employee-gold
 
+# Test Gmail Watcher (requires OAuth credentials)
+uv run python scripts/run_gmail_watcher.py
+
+# Test Gmail Watcher in dry-run mode (no Gmail connection needed)
+uv run python scripts/run_gmail_watcher.py --dry-run
+
 # Test Finance Watcher
 uv run python scripts/run_finance_watcher.py
 
@@ -134,7 +143,46 @@ uv run python scripts/run_ceo_briefing.py
 
 ## Detailed Feature Guide
 
-### 1. Finance Watcher
+### 1. Gmail Watcher
+
+**What it does:** Monitors your Gmail inbox for unread, important messages and creates action items in the vault automatically.
+
+**Capabilities:**
+- Detects new unread + important emails every 2 minutes
+- Creates a markdown action file in `Needs_Action/` for each email (sender, subject, snippet)
+- Tracks already-processed email IDs to avoid duplicates
+- Supports dry-run mode for testing without a Gmail connection
+
+**One-time setup (required before first run):**
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) and create or select a project
+2. Enable the **Gmail API** under APIs & Services > Library
+3. Create **OAuth 2.0 credentials** (Desktop app type) under APIs & Services > Credentials
+4. Download the JSON file and save it as `credentials/gmail_credentials.json`
+5. Add your Gmail address as a **test user** in the OAuth consent screen
+6. On first run a browser window opens — sign in and grant read access
+7. A `credentials/token.pickle` is saved automatically; future runs use it without re-prompting
+
+**How to use:**
+```bash
+# First run (browser opens for OAuth)
+uv run python scripts/run_gmail_watcher.py
+
+# Dry-run (creates a test file without Gmail connection)
+uv run python scripts/run_gmail_watcher.py --dry-run
+
+# Custom check interval (default 120 seconds)
+uv run python scripts/run_gmail_watcher.py --check-interval 60
+```
+
+**Where to see results:**
+- `Needs_Action/EMAIL_*.md` - One file per detected email
+- `Logs/processed_emails.txt` - IDs of already-processed emails (deduplication)
+- `/tmp/gmail_watcher.log` - Processing logs
+
+---
+
+### 2. Finance Watcher
 
 **What it does:** Monitors `Business/Transactions/` folder for bank CSV files.
 
@@ -153,7 +201,7 @@ uv run python scripts/run_ceo_briefing.py
 
 ---
 
-### 2. Odoo Integration
+### 3. Odoo Integration
 
 **What it does:** Connects to your Odoo accounting system to manage invoices.
 
@@ -177,31 +225,51 @@ uv run python scripts/run_ceo_briefing.py
 
 ---
 
-### 3. Twitter Integration
+### 4. Twitter/X Integration
 
-**What it does:** Manages your Twitter account with approval workflow.
+**What it does:** Manages your Twitter/X account with a human-in-the-loop approval workflow.
 
 **Capabilities:**
-- Post tweets (requires approval)
+- Post tweets (requires your approval before posting)
 - Schedule tweets for later
-- Track engagement metrics
+- Track engagement metrics (likes, retweets, impressions)
 - Monitor mentions
 
-**How to use:**
+**One-time setup (required before first run):**
+
+1. Go to [developer.twitter.com](https://developer.twitter.com/) and create a project + app
+2. Under your app's **Keys and Tokens**, generate:
+   - API Key & Secret
+   - Access Token & Secret (with **Read and Write** permissions)
+   - Bearer Token
+3. Save all five values in `credentials/twitter_credentials.json`:
+   ```json
+   {
+     "api_key": "YOUR_API_KEY",
+     "api_secret": "YOUR_API_SECRET",
+     "access_token": "YOUR_ACCESS_TOKEN",
+     "access_token_secret": "YOUR_ACCESS_TOKEN_SECRET",
+     "bearer_token": "YOUR_BEARER_TOKEN"
+   }
+   ```
+4. Ensure your app has **Read and Write** OAuth 1.0a permissions (not read-only)
+
+**How tweet posting works:**
 1. AI drafts a tweet → Creates `Pending_Approval/TWEET_*.md`
 2. You review the tweet in Obsidian
 3. Add `approved: true` to the frontmatter
-4. Approval Executor posts the tweet
+4. Approval Executor (runs every 1 min) detects the approval and posts the tweet
 5. Logged to `Social/Twitter/posted.md`
 
 **Where to see results:**
-- `Pending_Approval/TWEET_*.md` - Tweets awaiting approval
+- `Pending_Approval/TWEET_*.md` - Tweets awaiting your approval
 - `Social/Twitter/posted.md` - Posted tweets log
 - `Social/Twitter/engagement.md` - Engagement metrics
+- `Social/Twitter/scheduled_posts.md` - Scheduled future tweets
 
 ---
 
-### 4. CEO Briefing
+### 5. CEO Briefing
 
 **What it does:** Generates a weekly business intelligence report.
 
@@ -225,7 +293,7 @@ uv run python scripts/run_ceo_briefing.py
 
 ---
 
-### 5. Watchdog (System Monitor)
+### 6. Watchdog (System Monitor)
 
 **What it does:** Monitors all watchers and restarts them if they crash.
 
@@ -242,7 +310,7 @@ uv run python scripts/run_ceo_briefing.py
 
 ---
 
-### 6. Audit Logger
+### 7. Audit Logger
 
 **What it does:** Logs every action for compliance and debugging.
 
@@ -286,7 +354,9 @@ AI_EMPLOYEE_VAULT/
 │
 ├── Briefings/             ← CEO weekly briefings
 ├── Audit/                 ← Action logs (JSON)
-├── Logs/                  ← Process PID files
+├── Logs/
+│   ├── processed_emails.txt  ← Gmail deduplication IDs
+│   └── *.pid                 ← Process PID files (used by Watchdog)
 └── Tasks/                 ← Multi-step task tracking
 ```
 
@@ -350,14 +420,37 @@ tail -50 /tmp/finance_watcher.log
 2. Check crontab exists: `crontab -l`
 3. Check logs: `tail -f /tmp/*.log`
 
+### Gmail not working?
+
+**"File not found: gmail_credentials.json"**
+- Download OAuth credentials from Google Cloud Console and save as `credentials/gmail_credentials.json`
+
+**"Access blocked: This app's request is invalid"**
+- Add your Gmail address as a test user in the OAuth consent screen
+- Verify the Gmail API is enabled in your Google Cloud project
+
+**"Token has been expired or revoked"**
+- Delete `credentials/token.pickle` and re-run — the OAuth flow will restart in the browser
+
+**No emails appearing in Needs_Action/?**
+- Only emails marked **both** unread and important in Gmail are picked up
+- Mark emails as Important in Gmail or change the query in `src/watchers/gmail_watcher.py`
+
+### Twitter/X not working?
+
+**"Unauthorized" or "403 Forbidden"**
+- Verify your app has **Read and Write** permissions (not read-only) in the Twitter developer portal
+- Regenerate Access Token & Secret after changing permissions
+
+**Tweets not posting after approval?**
+- Confirm `approved: true` is in the frontmatter of the `Pending_Approval/TWEET_*.md` file
+- Check the Approval Executor is running: `tail -f /tmp/*.log | grep -i tweet`
+- Test credentials manually: `uv run python -c "from src.mcp.twitter_mcp import TwitterMCP; TwitterMCP()"`
+
 ### Odoo not connecting?
 1. Ensure Docker is running: `docker ps`
 2. Start Odoo: `cd ~/vibe-coding-projects/ai-employee-gold && docker-compose up -d`
 3. Check Odoo UI: http://localhost:8069
-
-### Twitter not working?
-1. Check credentials: `cat credentials/twitter_credentials.json`
-2. Test manually: `uv run python -c "from src.mcp.twitter_mcp import get_twitter_mcp; print(get_twitter_mcp().authenticate())"`
 
 ### Want to see what's happening in real-time?
 ```bash
