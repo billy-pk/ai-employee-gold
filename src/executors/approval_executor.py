@@ -143,9 +143,17 @@ class ApprovalExecutor:
                 reply_match = re.search(r'\*\*Reply-To Message ID:\*\*\s*(.+)', body)
                 result['reply_to_id'] = reply_match.group(1).strip() if reply_match else None
 
-            # Extract email body (between ``` markers)
+            # Extract email body (between ``` markers, or between --- dividers)
             body_match = re.search(r'```\n(.*?)```', search_area, re.DOTALL)
-            result['body'] = body_match.group(1).strip() if body_match else None
+            if not body_match:
+                body_match = re.search(r'\n---\n(.*?)\n---', search_area, re.DOTALL)
+            if body_match:
+                raw_body = body_match.group(1).strip()
+                # Strip markdown header lines (To/Subject/Cc) from the top of the body
+                raw_body = re.sub(r'^(\*\*(?:To|Subject|Cc|Bcc):\*\*[^\n]*\n)+\s*', '', raw_body)
+                result['body'] = raw_body.strip()
+            else:
+                result['body'] = None
 
         return result
 

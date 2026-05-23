@@ -82,7 +82,12 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
         try:
             frontmatter = yaml.safe_load(match.group(1)) or {}
         except yaml.YAMLError:
+            # Fall back to line-by-line parsing for unquoted values containing colons
             frontmatter = {}
+            for line in match.group(1).splitlines():
+                if ':' in line:
+                    key, _, val = line.partition(':')
+                    frontmatter[key.strip()] = val.strip()
         body = match.group(2)
 
     return frontmatter, body
