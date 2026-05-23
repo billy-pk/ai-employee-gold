@@ -83,47 +83,50 @@ If an email needs to be sent, create an approval request in `/Pending_Approval/`
 
 ```markdown
 ---
-action_id: [unique_id]
-action_type: email_send
-plan_reference: /Plans/PLAN_[id].md
-created_at: [ISO timestamp]
-expires_at: [ISO timestamp + 24 hours]
+approval_id: APPROVAL_[unique_id]
+plan_ref: PLAN_[id]
+action_type: email_reply
 status: pending
+created_at: [ISO timestamp]
+to: [recipient email]
+subject: "[email subject]"
+gmail_reply_to_id: [original gmail message id if replying]
 ---
 
-# Approval Required: Send Email
+# Approval Request: Reply to [Sender Name]
 
-## Summary
+## Action Requested
 
-Claude wants to send an email based on the analysis in the referenced plan.
+[One sentence describing what the reply does]
 
-## Email Details
+## Recipient
 
-- **To:** [recipient email]
-- **Subject:** [email subject]
-- **Reply-To:** [original gmail_id if replying]
+**To:** [recipient email]
+**Subject:** [email subject]
 
-## Email Body
+## Draft Reply
 
+---
+
+[Full email body here — start directly with the greeting, no To/Subject headers]
+
+---
+
+## Approval Instructions
+
+- Move this file to `/Approved/` to send the reply
+- Move this file to `/Rejected/` to discard without sending
+
+## References
+
+- Plan: /Plans/PLAN_[id].md
+- Source: /Needs_Action/[source_file].md
 ```
-[Proposed email content]
-```
 
-## Context
-
-- **Triggered By:** [Original item path]
-- **Plan Reference:** [Link to Plan.md]
-- **Reasoning:** [Brief explanation]
-
-## Instructions
-
-**To APPROVE:** Move this file to `/Approved/` folder
-**To REJECT:** Move this file to `/Rejected/` folder
-
-## Auto-Expiry
-
-This request expires at [expires_at].
-```
+**Important notes on the format:**
+- Always quote the `subject` value in frontmatter (e.g. `subject: "Re: Something"`) to avoid YAML parse errors when the subject contains colons
+- Place the email body between `---` dividers under `## Draft Reply`
+- Do NOT repeat `**To:**` / `**Subject:**` headers inside the `---` body block — those are already in the frontmatter
 
 ### 5. Update Dashboard
 

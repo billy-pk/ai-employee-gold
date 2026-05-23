@@ -25,6 +25,15 @@ load_dotenv(project_root / '.env')
 
 from src.executors.approval_executor import ApprovalExecutor
 
+STATE_FILE = Path('/mnt/d/AI_EMPLOYEE_VAULT/.state/approval_executor.last_run')
+
+
+def write_last_run(processed: int, success: int, status: str):
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | {status} | processed:{processed} success:{success}"
+    )
+
 
 def main():
     print(f"\n[{datetime.now().isoformat()}] === Approval Executor Start ===")
@@ -33,15 +42,20 @@ def main():
         executor = ApprovalExecutor()
         result = executor.run_once()
 
-        print(f"[{datetime.now().isoformat()}] Processed: {result.get('processed')}, Success: {result.get('success')}, Failed: {result.get('failed')}")
+        processed = result.get('processed', 0)
+        success = result.get('success', 0)
+        failed = result.get('failed', 0)
+        print(f"[{datetime.now().isoformat()}] Processed: {processed}, Success: {success}, Failed: {failed}")
+        write_last_run(processed, success, 'error' if failed > 0 else 'ok')
 
-        if result.get('failed', 0) > 0:
+        if failed > 0:
             return 1
 
         return 0
 
     except Exception as e:
         print(f"[{datetime.now().isoformat()}] ERROR: {e}")
+        write_last_run(0, 0, f'error: {e}')
         return 1
 
     finally:

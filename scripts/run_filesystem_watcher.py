@@ -22,18 +22,30 @@ load_dotenv(project_root / '.env')
 
 from src.watchers.filesystem_watcher import FileSystemWatcher
 
+STATE_FILE = Path('/mnt/d/AI_EMPLOYEE_VAULT/.state/filesystem_watcher.last_run')
+
+
+def write_last_run(count: int, status: str):
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | {status} | files:{count}"
+    )
+
 
 def main():
     print(f"\n[{datetime.now().isoformat()}] === File System Watcher Start ===")
+    count = 0
 
     try:
         watcher = FileSystemWatcher()
         count = watcher.run_once()
         print(f"[{datetime.now().isoformat()}] Processed {count} file(s)")
+        write_last_run(count, 'ok')
         return 0
 
     except Exception as e:
         print(f"[{datetime.now().isoformat()}] ERROR: {e}")
+        write_last_run(count, f'error: {e}')
         return 1
 
     finally:

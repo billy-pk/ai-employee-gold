@@ -325,6 +325,22 @@ class ProcessMonitor:
             self.logger.warning("Dashboard.md not found - skipping update")
             return
 
+        state_dir = Path('/mnt/d/AI_EMPLOYEE_VAULT/.state')
+        state_files = {
+            'gmail_watcher': 'gmail_watcher.last_run',
+            'filesystem_watcher': 'filesystem_watcher.last_run',
+            'finance_watcher': 'finance_watcher.last_run',
+            'approval_executor': 'approval_executor.last_run',
+            'claude_processor': 'claude_processor.last_run',
+        }
+
+        def read_last_run(key: str) -> str:
+            path = state_dir / state_files.get(key, '')
+            if path.exists():
+                line = path.read_text().strip()
+                return line.split(' | ')[0]  # just the timestamp part
+            return '-'
+
         try:
             content = dashboard_path.read_text()
 
@@ -332,21 +348,19 @@ class ProcessMonitor:
             health_lines = [
                 "## System Health",
                 "",
-                "| Service | Status | Restarts | Last Check |",
-                "|---------|--------|----------|------------|",
+                "| Service | Status | Restarts | Last Run |",
+                "|---------|--------|----------|----------|",
             ]
 
             for process_key, process in self.processes.items():
                 status = results['processes'].get(process_key, {})
                 status_emoji = '🟢' if status.get('running') else '🔴'
                 status_text = status.get('status', 'unknown').title()
-
-                last_check = process.last_check
-                check_time = last_check.strftime('%H:%M') if last_check else '-'
+                last_run = read_last_run(process_key)
 
                 health_lines.append(
                     f"| {process.name} | {status_emoji} {status_text} | "
-                    f"{process.failure_count} | {check_time} |"
+                    f"{process.failure_count} | {last_run} |"
                 )
 
             health_lines.extend([

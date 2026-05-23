@@ -68,8 +68,14 @@ On first run of the Gmail Watcher, a browser window opens automatically:
 - Verify the Gmail API is enabled in your Google Cloud project
 
 **"Token has been expired or revoked"**
-- Delete `token.pickle` (and `token_send.pickle` if it exists) and re-run — the OAuth flow restarts in the browser
+- Run `uv run python scripts/setup_gmail_auth.py` from the project root — it silently refreshes both tokens, and opens a browser only if the refresh token itself has expired
+- As a last resort, delete `token.pickle` and/or `token_send.pickle` manually and re-run the script to force a full re-authorization
 - Check that you haven't revoked access in your Google Account security settings
+
+**Refreshing tokens separately**
+- `token.pickle` is used by the Gmail Watcher (reading emails)
+- `token_send.pickle` is used by the Approval Executor (sending replies)
+- Both are refreshed by `scripts/setup_gmail_auth.py` in a single run
 
 ---
 

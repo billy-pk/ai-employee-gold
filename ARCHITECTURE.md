@@ -241,6 +241,10 @@ Social/Twitter/posted.md (logged)
 
 | Task | Schedule | Script |
 |------|----------|--------|
+| Gmail Watcher | `*/2 * * * *` | `scripts/run_gmail_watcher.py` |
+| Filesystem Watcher | `*/1 * * * *` | `scripts/run_filesystem_watcher.py` |
+| Claude Processor | `*/5 * * * *` | `scripts/run_claude_processor.py` |
+| Approval Executor | `*/1 * * * *` | `scripts/run_approval_executor.py` |
 | Finance Watcher | `*/5 * * * *` | `scripts/run_finance_watcher.py` |
 | Watchdog | `*/5 * * * *` | `scripts/run_watchdog.py` |
 | Odoo Sync | `0 */6 * * *` | `scripts/run_odoo_sync.py` |
