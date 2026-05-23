@@ -371,17 +371,35 @@ class ProcessMonitor:
 
             health_section = '\n'.join(health_lines)
 
-            # Replace existing health section or append
             import re
+
+            # Replace existing health section or append
             health_pattern = r'## System Health\n.*?(?=\n## |\n---|\Z)'
             if re.search(health_pattern, content, re.DOTALL):
                 content = re.sub(health_pattern, health_section, content, flags=re.DOTALL)
             else:
-                # Find a good place to insert (after System Status if it exists)
                 status_match = re.search(r'(## System Status\n.*?)(\n## |\n---|\Z)', content, re.DOTALL)
                 if status_match:
                     insert_pos = status_match.end(1)
                     content = content[:insert_pos] + '\n\n' + health_section + content[insert_pos:]
+
+            # Also update Last Run column in the System Status table
+            status_last_run = {
+                'Gmail Watcher':      read_last_run('gmail_watcher'),
+                'File System Watcher': read_last_run('filesystem_watcher'),
+                'Finance Watcher':    read_last_run('finance_watcher'),
+                'Claude Processor':   read_last_run('claude_processor'),
+                'Approval Executor':  read_last_run('approval_executor'),
+            }
+            for component, last_run in status_last_run.items():
+                if last_run == '-':
+                    continue
+                # Match the row for this component and replace its Last Run cell
+                content = re.sub(
+                    rf'(\| {re.escape(component)} \|[^|]+\|) [^|]+ (\|)',
+                    rf'\1 {last_run} \2',
+                    content
+                )
 
             dashboard_path.write_text(content)
             self.logger.debug("Dashboard updated with health status")
