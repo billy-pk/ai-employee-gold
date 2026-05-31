@@ -386,10 +386,8 @@ class ProcessMonitor:
             # Also update Last Check column in the System Health table
             status_last_run = {
                 'Gmail Watcher':      read_last_run('gmail_watcher'),
-                'Filesystem Watcher': read_last_run('filesystem_watcher'),
+                'FileSystem Watcher': read_last_run('filesystem_watcher'),
                 'Finance Watcher':    read_last_run('finance_watcher'),
-                'Claude Processor':   read_last_run('claude_processor'),
-                'Approval Executor':  read_last_run('approval_executor'),
             }
             for component, last_run in status_last_run.items():
                 if last_run == '-':
