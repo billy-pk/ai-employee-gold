@@ -383,10 +383,10 @@ class ProcessMonitor:
                     insert_pos = status_match.end(1)
                     content = content[:insert_pos] + '\n\n' + health_section + content[insert_pos:]
 
-            # Also update Last Run column in the System Status table
+            # Also update Last Check column in the System Health table
             status_last_run = {
                 'Gmail Watcher':      read_last_run('gmail_watcher'),
-                'File System Watcher': read_last_run('filesystem_watcher'),
+                'Filesystem Watcher': read_last_run('filesystem_watcher'),
                 'Finance Watcher':    read_last_run('finance_watcher'),
                 'Claude Processor':   read_last_run('claude_processor'),
                 'Approval Executor':  read_last_run('approval_executor'),
