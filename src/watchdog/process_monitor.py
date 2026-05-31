@@ -376,7 +376,7 @@ class ProcessMonitor:
             # Replace existing health section or append
             health_pattern = r'## System Health\n.*?(?=\n## |\n---|\Z)'
             if re.search(health_pattern, content, re.DOTALL):
-                content = re.sub(health_pattern, health_section, content, flags=re.DOTALL)
+                content = re.sub(health_pattern, lambda _: health_section, content, flags=re.DOTALL)
             else:
                 status_match = re.search(r'(## System Status\n.*?)(\n## |\n---|\Z)', content, re.DOTALL)
                 if status_match:
@@ -394,10 +394,10 @@ class ProcessMonitor:
             for component, last_run in status_last_run.items():
                 if last_run == '-':
                     continue
-                # Match the row for this component and replace its Last Run cell
+                # Match the row for this component and replace its Last Check cell
                 content = re.sub(
-                    rf'(\| {re.escape(component)} \|[^|]+\|) [^|]+ (\|)',
-                    rf'\1 {last_run} \2',
+                    rf'\| {re.escape(component)} \|[^|]+\| [^|]+ \|',
+                    lambda m, lr=last_run: m.group(0).rsplit('|', 2)[0] + f'| {lr} |',
                     content
                 )
 
