@@ -383,7 +383,7 @@ class ProcessMonitor:
                     insert_pos = status_match.end(1)
                     content = content[:insert_pos] + '\n\n' + health_section + content[insert_pos:]
 
-            # Also update Last Check column in the System Health table
+            # Also update Last Run column in the System Status table (3-column rows only)
             status_last_run = {
                 'Gmail Watcher':      read_last_run('gmail_watcher'),
                 'FileSystem Watcher': read_last_run('filesystem_watcher'),
@@ -392,9 +392,10 @@ class ProcessMonitor:
             for component, last_run in status_last_run.items():
                 if last_run == '-':
                     continue
-                # Match the row for this component and replace its Last Check cell
+                # (?=\s*\n) ensures we only match 3-column rows — 4-column rows
+                # (like System Health) have more content after the third pipe
                 content = re.sub(
-                    rf'\| {re.escape(component)} \|[^|]+\| [^|]+ \|',
+                    rf'\| {re.escape(component)} \|[^|]+\| [^|]+ \|(?=\s*\n)',
                     lambda m, lr=last_run: m.group(0).rsplit('|', 2)[0] + f'| {lr} |',
                     content
                 )
