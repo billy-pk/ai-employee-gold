@@ -400,11 +400,12 @@ class ProcessMonitor:
             for component, last_run in status_last_run.items():
                 if last_run == '-':
                     continue
+                # \s* handles column-aligned padding in the System Status table.
                 # (?=\s*\n) ensures we only match 3-column rows — 4-column rows
-                # (like System Health) have more content after the third pipe
+                # (like System Health) have more content after the third pipe.
                 content = re.sub(
-                    rf'\| {re.escape(component)} \|[^|]+\| [^|]+ \|(?=\s*\n)',
-                    lambda m, lr=last_run: m.group(0).rsplit('|', 2)[0] + f'| {lr} |',
+                    rf'\|\s*{re.escape(component)}\s*\|[^|]+\| [^|]+ \|(?=\s*\n)',
+                    lambda m, lr=last_run: m.group(0).rsplit('|', 2)[0].rstrip() + f' | {lr} |',
                     content
                 )
 
