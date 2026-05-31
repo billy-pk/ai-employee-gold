@@ -327,11 +327,14 @@ class ProcessMonitor:
 
         state_dir = Path('/mnt/d/AI_EMPLOYEE_VAULT/.state')
         state_files = {
-            'gmail_watcher': 'gmail_watcher.last_run',
+            'gmail_watcher':    'gmail_watcher.last_run',
             'filesystem_watcher': 'filesystem_watcher.last_run',
-            'finance_watcher': 'finance_watcher.last_run',
+            'finance_watcher':  'finance_watcher.last_run',
             'approval_executor': 'approval_executor.last_run',
             'claude_processor': 'claude_processor.last_run',
+            'watchdog':         'watchdog.last_run',
+            'ceo_briefing':     'ceo_briefing.last_run',
+            'odoo_sync':        'odoo_sync.last_run',
         }
 
         def read_last_run(key: str) -> str:
@@ -386,8 +389,13 @@ class ProcessMonitor:
             # Also update Last Run column in the System Status table (3-column rows only)
             status_last_run = {
                 'Gmail Watcher':      read_last_run('gmail_watcher'),
-                'FileSystem Watcher': read_last_run('filesystem_watcher'),
+                'File System Watcher': read_last_run('filesystem_watcher'),
                 'Finance Watcher':    read_last_run('finance_watcher'),
+                'Claude Processor':   read_last_run('claude_processor'),
+                'Approval Executor':  read_last_run('approval_executor'),
+                'Watchdog':           read_last_run('watchdog'),
+                'CEO Briefing':       read_last_run('ceo_briefing'),
+                'Odoo MCP':           read_last_run('odoo_sync'),
             }
             for component, last_run in status_last_run.items():
                 if last_run == '-':

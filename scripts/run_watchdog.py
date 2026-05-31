@@ -21,6 +21,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+STATE_FILE = Path('/mnt/d/AI_EMPLOYEE_VAULT/.state/watchdog.last_run')
+
+
+def write_last_run(running: int, total: int, status: str):
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | {status} | processes:{running}/{total}"
+    )
+
+
 def main():
     print(f"\n{'='*50}")
     print(f"Watchdog - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -53,12 +63,14 @@ def main():
             for alert in results['alerts']:
                 print(f"  - {alert['message']}")
 
+        write_last_run(running, total, 'ok')
         return 0
 
     except Exception as e:
         print(f"\nERROR: {e}")
         import traceback
         traceback.print_exc()
+        write_last_run(0, 0, f'error: {e}')
         return 1
 
     finally:
