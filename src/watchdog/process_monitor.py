@@ -5,6 +5,7 @@ The Watchdog monitors all critical watcher processes via PID files,
 detects failures, restarts processes, and alerts on persistent issues.
 """
 
+import json
 import os
 import signal
 import subprocess
@@ -325,7 +326,7 @@ class ProcessMonitor:
             self.logger.warning("Dashboard.md not found - skipping update")
             return
 
-        state_dir = Path('/mnt/d/AI_EMPLOYEE_VAULT/.state')
+        state_dir = self.vault_path / '.state'
         state_files = {
             'gmail_watcher':    'gmail_watcher.last_run',
             'filesystem_watcher': 'filesystem_watcher.last_run',
@@ -335,6 +336,7 @@ class ProcessMonitor:
             'watchdog':         'watchdog.last_run',
             'ceo_briefing':     'ceo_briefing.last_run',
             'odoo_sync':        'odoo_sync.last_run',
+            'audit_logger':     'audit_logger.last_run',
         }
 
         def read_last_run(key: str) -> str:
@@ -396,6 +398,7 @@ class ProcessMonitor:
                 'Watchdog':           read_last_run('watchdog'),
                 'CEO Briefing':       read_last_run('ceo_briefing'),
                 'Odoo MCP':           read_last_run('odoo_sync'),
+                'Audit Logger':       read_last_run('audit_logger'),
             }
             for component, last_run in status_last_run.items():
                 if last_run == '-':
@@ -408,6 +411,48 @@ class ProcessMonitor:
                     lambda m, lr=last_run: m.group(0).rsplit('|', 2)[0].rstrip() + f' | {lr} |',
                     content
                 )
+
+            # Populate Recent Actions table from today's audit log
+            recent_actions_lines = [
+                "## Recent Actions",
+                "",
+                "| Time | Action | Recipient | Status |",
+                "|------|--------|-----------|--------|",
+            ]
+
+            action_labels = {
+                'email_send': 'Email Reply',
+                'invoice_create': 'Invoice Created',
+                'tweet_post': 'Tweet Posted',
+                'file_process': 'File Processed',
+            }
+
+            audit_file = self.vault_path / 'Audit' / f"{datetime.now().strftime('%Y-%m-%d')}.json"
+            entries = []
+            if audit_file.exists():
+                try:
+                    with open(audit_file, 'r', encoding='utf-8') as f:
+                        entries = json.load(f).get('entries', [])
+                except (json.JSONDecodeError, IOError) as e:
+                    self.logger.warning(f"Failed to read audit file for Recent Actions: {e}")
+
+            if entries:
+                for entry in entries[-10:][::-1]:
+                    timestamp = entry.get('timestamp', '')
+                    time_str = timestamp[11:16] if len(timestamp) >= 16 else timestamp
+                    action = action_labels.get(entry.get('action_type', ''), entry.get('action_type', 'Unknown'))
+                    recipient = entry.get('target', '-')
+                    status = '✅ Success' if entry.get('result') == 'success' else (
+                        '❌ Failed' if entry.get('result') == 'failure' else entry.get('result', '-')
+                    )
+                    recent_actions_lines.append(f"| {time_str} | {action} | {recipient} | {status} |")
+            else:
+                recent_actions_lines.append("| - | - | - | - |")
+
+            recent_actions_section = '\n'.join(recent_actions_lines)
+            recent_actions_pattern = r'## Recent Actions\n.*?(?=\n## |\n---|\Z)'
+            if re.search(recent_actions_pattern, content, re.DOTALL):
+                content = re.sub(recent_actions_pattern, lambda _: recent_actions_section, content, flags=re.DOTALL)
 
             dashboard_path.write_text(content)
             self.logger.debug("Dashboard updated with health status")

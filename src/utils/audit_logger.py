@@ -37,6 +37,17 @@ class AuditLogger:
         self.audit_dir = self.vault_path / 'Audit'
         self.audit_dir.mkdir(parents=True, exist_ok=True)
         self.retention_days = 90
+        self.state_file = self.vault_path / '.state' / 'audit_logger.last_run'
+
+    def _write_last_run(self, status: str) -> None:
+        """Write a last_run state file so the Watchdog can reflect it on the Dashboard."""
+        try:
+            self.state_file.parent.mkdir(parents=True, exist_ok=True)
+            self.state_file.write_text(
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | {status}"
+            )
+        except OSError as e:
+            self.logger.warning(f"Failed to write audit_logger last_run state: {e}")
 
     def _get_today_file(self) -> Path:
         """Get the path to today's audit log file."""
@@ -129,9 +140,11 @@ class AuditLogger:
                 self._write_audit_file(audit_file, data)
 
             self.logger.debug(f"Audit logged: {action_type} by {actor} -> {target}")
+            self._write_last_run('ok')
 
         except Exception as e:
             self.logger.error(f"Failed to write audit log: {e}")
+            self._write_last_run(f'error: {e}')
             # Don't raise - audit logging should not break the system
 
         return entry
