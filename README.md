@@ -19,6 +19,20 @@ AI Employee is an **autonomous assistant** that runs in the background and manag
 5. **Social Media** - Posts tweets (with approval), tracks engagement metrics
 6. **Business Intelligence** - Generates weekly CEO briefings with insights
 
+It's a **local-first Python system**: every watcher/processor is a standalone script scheduled by cron, all state lives in an **Obsidian vault** (plain markdown files on disk — no external database except Odoo's own Postgres), and Claude Code is used as the reasoning engine that turns raw inputs (emails, CSVs, files) into plans and drafts.
+
+### Tech Stack
+
+| Piece | What it is |
+|-------|-----------|
+| Python 3.13+ / `uv` | Runtime and package/dependency manager (see `pyproject.toml`) |
+| Cron | Schedules every watcher/processor — see [Automatic Schedule](#automatic-schedule-cron) |
+| Obsidian vault | The "database" — plain markdown folders (`Needs_Action/`, `Pending_Approval/`, `Done/`, etc.) that both the AI and you read/write |
+| Claude Code | Invoked by the Claude Processor to reason over items in `Needs_Action/` and produce plans/drafts |
+| Odoo 19 (Docker) + Postgres 15 | Self-hosted invoicing/accounting backend, see [Odoo Setup](#odoo-setup-invoicing-backend) below |
+| Gmail API (OAuth2) | Email monitoring and sending |
+| Twitter/X API v2 (Tweepy) | Social posting and engagement tracking |
+
 ### Key Principle: Human-in-the-Loop
 
 The AI **never takes action without your approval**. It:
@@ -27,6 +41,70 @@ The AI **never takes action without your approval**. It:
 - Puts them in `Pending_Approval/` folder
 - Waits for you to approve or reject
 - Only then executes the action
+
+---
+
+## First-Time Setup
+
+### Prerequisites
+
+- **Python 3.13+** and [`uv`](https://docs.astral.sh/uv/) installed
+- **Docker** (for the Odoo invoicing backend)
+- **Obsidian** (desktop app) to browse/approve items in the vault — [obsidian.md](https://obsidian.md)
+- **cron** running (Linux/WSL) for automatic scheduling
+
+### 1. Install dependencies
+
+```bash
+cd ~/vibe-coding-projects/ai-employee-gold
+uv sync
+```
+
+This creates `.venv/` and installs everything pinned in `uv.lock`.
+
+### 2. Configure environment (optional)
+
+Copy `.env.example` to `.env` and adjust if your setup differs from the defaults (vault location, thresholds, etc.) — the code falls back to the values in `.env.example` if no `.env` is present, so this step can be skipped for a default local setup:
+
+```bash
+cp .env.example .env
+```
+
+Key variable: `VAULT_PATH` — where the Obsidian vault lives (default `/mnt/d/AI_EMPLOYEE_VAULT` in WSL notation, i.e. `D:\AI_EMPLOYEE_VAULT` from Windows).
+
+### 3. Set up credentials
+
+See [`credentials/README.md`](credentials/README.md) for the full walkthrough of each integration. Summary:
+
+| Integration | File | Required for |
+|---|---|---|
+| Gmail | `credentials/gmail_credentials.json` (+ auto-generated `token.pickle`, `token_send.pickle`) | Gmail Watcher, email replies |
+| Twitter/X | `credentials/twitter_credentials.json` | Social poster, engagement tracking |
+| Odoo | `credentials/odoo_config.json` | Invoice sync (see [Odoo Setup](#odoo-setup-invoicing-backend) below) |
+
+### 4. Start Odoo (invoicing backend)
+
+See [Odoo Setup](#odoo-setup-invoicing-backend) below for full details — short version:
+
+```bash
+cd odoo19
+docker-compose up -d
+# Open http://localhost:8069 and complete the setup wizard
+```
+
+### 5. Open the vault in Obsidian
+
+Launch the Obsidian desktop app → **Open folder as vault** → point it at your `VAULT_PATH` (e.g. `D:\AI_EMPLOYEE_VAULT` on Windows). This is just a window onto the markdown files — the automation runs independently of whether Obsidian is open.
+
+### 6. Register the cron schedule
+
+```bash
+crontab config/crontab.example   # review it first — edit paths if your project isn't at ~/vibe-coding-projects/ai-employee-gold
+crontab -l                        # verify it's installed
+sudo service cron start           # make sure cron itself is running
+```
+
+From here on the system runs itself — see [How It Works](#how-it-works) below.
 
 ---
 
@@ -200,7 +278,7 @@ uv run python scripts/run_gmail_watcher.py --check-interval 60
 
 ### 3. Odoo Integration
 
-**What it does:** Connects to your Odoo accounting system to manage invoices.
+**What it does:** Connects to a self-hosted Odoo accounting system to manage invoices.
 
 **Capabilities:**
 - Create invoices
@@ -209,11 +287,42 @@ uv run python scripts/run_gmail_watcher.py --check-interval 60
 - Check account balances
 - Sync financial data
 
-**How to use:**
-1. Ensure Odoo is running: `docker-compose up -d`
-2. Access Odoo UI: http://localhost:8069
-3. System syncs automatically every 6 hours
+#### Odoo Setup (invoicing backend)
+
+Odoo runs entirely locally via Docker — there's no external SaaS dependency. The stack is defined in [`odoo19/docker-compose.yaml`](odoo19/docker-compose.yaml):
+
+- **`db`** — `postgres:15`, the database backing Odoo (user `odoo` / password `odoo`, database `postgres`)
+- **`odoo`** — `odoo:19` (Odoo Community 19), exposed on host port `8069`, depends on `db`
+
+**One-time setup:**
+
+```bash
+cd odoo19
+docker-compose up -d          # pulls images (first run) and starts both containers
+docker ps                     # confirm odoo19 and odoo19-db are Up
+```
+
+1. Open **http://localhost:8069** in a browser
+2. Complete the initial setup wizard: create a database (e.g. `ai_employee_db`), set an admin email/password
+3. Install the **Invoicing** module from the Apps menu
+4. Create an API key: **Settings → Users → API Keys** (needed instead of a password for programmatic access)
+5. Save the connection details to `credentials/odoo_config.json`:
+   ```json
+   {
+     "url": "http://localhost:8069",
+     "database": "ai_employee_db",
+     "username": "your-odoo-login-email",
+     "api_key": "YOUR_API_KEY",
+     "timeout": 30
+   }
+   ```
+
+**Day-to-day use:**
+1. Ensure Odoo is running: `docker ps` (if not, `cd odoo19 && docker-compose up -d`)
+2. Access Odoo UI any time at http://localhost:8069
+3. System syncs automatically every 6 hours via cron
 4. Manual sync: `uv run python scripts/run_odoo_sync.py`
+5. Stop Odoo: `cd odoo19 && docker-compose down` (data persists in the `odoo19-db-data`/`odoo19-data` Docker volumes, so `up -d` again picks up right where you left off)
 
 **Where to see results:**
 - `Data/Financial/FINANCIAL_SNAPSHOT_*.json` - Raw data
@@ -417,8 +526,9 @@ tail -50 /tmp/finance_watcher.log
 
 ### Odoo not connecting?
 1. Ensure Docker is running: `docker ps`
-2. Start Odoo: `cd ~/vibe-coding-projects/ai-employee-gold && docker-compose up -d`
+2. Start Odoo: `cd ~/vibe-coding-projects/ai-employee-gold/odoo19 && docker-compose up -d`
 3. Check Odoo UI: http://localhost:8069
+4. Verify `credentials/odoo_config.json` has the correct `url`, `database`, `username`, and `api_key` (see [Odoo Setup](#odoo-setup-invoicing-backend))
 
 ### Want to see what's happening in real-time?
 ```bash
