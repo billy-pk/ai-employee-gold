@@ -476,6 +476,8 @@ crontab -r
 sudo service cron stop
 ```
 
+> **Note:** The Gold watcher jobs are currently commented out in the crontab (not removed) — a backup of the last active crontab is kept at `config/crontab.backup` (gitignored). To resume automatic scheduling, run `crontab -e` and uncomment the "AI Employee Gold (ACTIVE)" lines, or restore the backup with `crontab config/crontab.backup`, then confirm with `crontab -l`.
+
 ### Check System Health
 ```bash
 # Quick status check

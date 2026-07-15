@@ -31,5 +31,8 @@ credentials/twitter_credentials.json
 # Cache
 .pytest_cache/
 
+# Crontab backups
+config/crontab.backup
+
 # UV lock (optional - can include for reproducibility)
 # uv.lock
